@@ -1,0 +1,50 @@
+name: Build RAYD APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Unzip RAYD project
+        run: |
+          unzip RAYDCalculator_GitHub_APK_Project_FIXED6_MATCHED_LAYOUT.zip -d extracted
+          find extracted -maxdepth 5 -type f | sort
+
+      - name: Build APK
+        run: |
+          PROJECT_DIR=$(find extracted -name "settings.gradle.kts" -exec dirname {} \; | head -n 1)
+          echo "Project directory: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          else
+            gradle :app:assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rayd-debug-apk
+          path: "**/app/build/outputs/apk/debug/*.apk"
